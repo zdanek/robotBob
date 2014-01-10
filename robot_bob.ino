@@ -20,8 +20,13 @@ const int frontLightInPin = A0;
 const int leftLightInPin = A4;
 const int rightLightInPin = A5;
 
-const int rightSpeed = 170;
-const int leftSpeed = 200;
+const int rightSpeed = 220;
+const int leftSpeed = 250;
+
+const int bobStopDist = 10;
+const int swingDist = 20;
+
+const int frontLightStopValue = 190;
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 
@@ -87,11 +92,17 @@ void loop()
   
   goBob(cm, mainLight, leftLight, rightLight);
 
-  delay(2000);
+  delay(200);
 }
 
 void goBob(long distanceCm, long mainLight, long leftLight, long rightLight) {
-    if (distanceCm > 30) {
+    
+    if (mainLight < frontLightStopValue || leftLight < frontLightStopValue || rightLight < frontLightStopValue) {
+        bobStop();
+        return;
+    }
+    
+    if (distanceCm > swingDist) {
         DEBUG("go");
         
         if (mainLight < leftLight && mainLight < rightLight) {
@@ -107,31 +118,53 @@ void goBob(long distanceCm, long mainLight, long leftLight, long rightLight) {
             }
         }
     } else {
-        DEBUG("swing");
-        swing();
+        if (distanceCm < bobStopDist) {
+            DEBUG("stop");
+            bobStop();
+        } else {
+            DEBUG("swing");
+            swing();
+        }
     }
 }
 
 void go() {
   rMotor->run(FORWARD);
   lMotor->run(FORWARD);
-  lMotor->setSpeed(200);
-  rMotor->setSpeed(200);
+  lMotor->setSpeed(leftSpeed);
+  rMotor->setSpeed(rightSpeed);
 }
 
 void swing() {
+    return;
+  rMotor->run(FORWARD);
+  lMotor->run(BACKWARD);
+  lMotor->setSpeed(120);
+  rMotor->setSpeed(120);
+  delay(10);
+
+}
+
+void bobStop() {
+  rMotor->run(RELEASE);
+  lMotor->run(RELEASE);
+//  delay(100);
 }
 
 void twistLeft() {
   lMotor->run(RELEASE);
   rMotor->run(FORWARD);
   rMotor->setSpeed(100);
+  //delay(100);
+//  go();
 }
 
 void twistRight() {
   rMotor->run(RELEASE);
   lMotor->run(FORWARD);
   lMotor->setSpeed(100);
+//  delay(100);
+  //go();
 }
 
 long readLight(int analogInPin) {
