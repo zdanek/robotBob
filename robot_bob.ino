@@ -2,6 +2,7 @@
 #include <Adafruit_MotorShield.h>
 
 
+#define PRODUCTION
 
 #ifndef PRODUCTION
 #define DEBUG(MSG) Serial.println(MSG)
@@ -24,7 +25,7 @@ const int rightSpeed = 220;
 const int leftSpeed = 250;
 
 const int bobStopDist = 20;
-const int swingDist = 30;
+const int swingDist = 0;
 
 const int frontLightStopValue = 220;
 
@@ -37,8 +38,10 @@ Adafruit_DCMotor *lMotor = AFMS.getMotor(4);
 
 void setup() {
   // initialize serial communication:
-  Serial.begin(9600);
+#ifndef PRODUCTION
   
+  Serial.begin(9600);
+#endif  
   AFMS.begin();  // create with the default frequency 1.6KHz
 
     lMotor->run(RELEASE);
@@ -71,9 +74,6 @@ void loop()
   
   //cm = 50;
   
-  Serial.print(cm);
-  Serial.print("cm");
-  Serial.println();
   
   long mainLight = readLight(frontLightInPin);
   long leftLight = readLight(leftLightInPin);
@@ -147,7 +147,9 @@ void swing() {
 
 void bobStop() {
   rMotor->run(RELEASE);
-  lMotor->run(RELEASE);
+   lMotor->run(RELEASE);
+  rMotor->setSpeed(0);
+  lMotor->setSpeed(0);
 //  delay(100);
 }
 
