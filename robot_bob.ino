@@ -1,10 +1,16 @@
+#include <Wire.h>
+#include <Adafruit_MotorShield.h>
+
+
 
 #ifndef PRODUCTION
 #define DEBUG(MSG) Serial.println(MSG)
+#define DEBUGN(MSG) Serial.print(MSG)
 #define DEBUGHEX(LONG) Serial.println(LONG, HEX)
 #else
 #define DEBUGHEX(LONG) 
 #define DEBUG(MSG) 
+#define DEBUGN(MSG)
 #endif
 
 
@@ -14,13 +20,29 @@ const int frontLightInPin = A0;
 const int leftLightInPin = A4;
 const int rightLightInPin = A5;
 
+const int rightSpeed = 170;
+const int leftSpeed = 200;
+
+Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
+
+Adafruit_DCMotor *rMotor = AFMS.getMotor(1);
+Adafruit_DCMotor *lMotor = AFMS.getMotor(4);
+
+
+
 void setup() {
   // initialize serial communication:
   Serial.begin(9600);
+  
+  AFMS.begin();  // create with the default frequency 1.6KHz
+
+    lMotor->run(RELEASE);
+    rMotor->run(RELEASE);
 }
 
 void loop()
 {
+    
   // establish variables for duration of the ping, 
   // and the distance result in inches and centimeters:
   long duration, inches, cm;
@@ -42,6 +64,8 @@ void loop()
 
   cm = microsecondsToCentimeters(duration);
   
+  //cm = 50;
+  
   Serial.print(cm);
   Serial.print("cm");
   Serial.println();
@@ -50,23 +74,64 @@ void loop()
   long leftLight = readLight(leftLightInPin);
   long rightLight = readLight(rightLightInPin);
   
-  DEBUG("Front light");
+  DEBUGN("Front light ");
   DEBUG(mainLight);
-  DEBUG("Left light");
+  DEBUGN("Left light ");
   DEBUG(leftLight);
+  DEBUGN("Right light ");
+  DEBUG(rightLight);
+  DEBUGN("Dist ");
+  DEBUGN(cm);
+  DEBUG("cm");
   
   
   goBob(cm, mainLight, leftLight, rightLight);
-  
-  delay(1000);
+
+  delay(2000);
 }
 
 void goBob(long distanceCm, long mainLight, long leftLight, long rightLight) {
     if (distanceCm > 30) {
         DEBUG("go");
+        
+        if (mainLight < leftLight && mainLight < rightLight) {
+            DEBUG("FWD^^^^^^");
+            go();
+        } else {
+            if (leftLight < rightLight) {
+                DEBUG("LEFT <----");
+                twistLeft();
+            } else {
+                DEBUG("RIGHT ---->");
+                twistRight();
+            }
+        }
     } else {
         DEBUG("swing");
+        swing();
     }
+}
+
+void go() {
+  rMotor->run(FORWARD);
+  lMotor->run(FORWARD);
+  lMotor->setSpeed(200);
+  rMotor->setSpeed(200);
+}
+
+void swing() {
+}
+
+void twistLeft() {
+  lMotor->run(RELEASE);
+  rMotor->run(FORWARD);
+  rMotor->setSpeed(100);
+}
+
+void twistRight() {
+  rMotor->run(RELEASE);
+  lMotor->run(FORWARD);
+  lMotor->setSpeed(100);
 }
 
 long readLight(int analogInPin) {
