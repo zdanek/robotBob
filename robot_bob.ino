@@ -23,10 +23,10 @@ const int rightLightInPin = A5;
 const int rightSpeed = 220;
 const int leftSpeed = 250;
 
-const int bobStopDist = 10;
-const int swingDist = 20;
+const int bobStopDist = 20;
+const int swingDist = 30;
 
-const int frontLightStopValue = 190;
+const int frontLightStopValue = 220;
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 
@@ -152,17 +152,19 @@ void bobStop() {
 }
 
 void twistLeft() {
-  lMotor->run(RELEASE);
+  lMotor->run(BACKWARD);
   rMotor->run(FORWARD);
   rMotor->setSpeed(100);
+  lMotor->setSpeed(100);
   //delay(100);
 //  go();
 }
 
 void twistRight() {
-  rMotor->run(RELEASE);
+  rMotor->run(BACKWARD);
   lMotor->run(FORWARD);
   lMotor->setSpeed(100);
+  rMotor->setSpeed(100);
 //  delay(100);
   //go();
 }
