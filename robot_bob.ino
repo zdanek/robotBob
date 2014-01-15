@@ -2,7 +2,13 @@
 #include <Adafruit_MotorShield.h>
 
 
-#define PRODUCTION
+//#define PRODUCTION
+#define ENABLE_RC
+
+#ifdef ENABLE_RC
+#include <IRremote.h>
+#endif
+
 
 #ifndef PRODUCTION
 #define DEBUG(MSG) Serial.println(MSG)
@@ -21,13 +27,27 @@ const int frontLightInPin = A0;
 const int leftLightInPin = A4;
 const int rightLightInPin = A5;
 
-const int rightSpeed = 220;
+const int rightSpeed = 230;
 const int leftSpeed = 250;
 
 const int bobStopDist = 20;
 const int swingDist = 0;
 
 const int frontLightStopValue = 220;
+
+const int IR_RECV_PIN = 4;
+const long PILOT_FWD = 0x122458A7;
+const long PILOT_BCK = 0x1224D827;
+const long PILOT_LFT = 0x1224B847;
+const long PILOT_RGT = 0x1224B04F;
+const long PILOT_PWR = 0x122430CF;
+const long PILOT_FAV = 0x1224E41B;
+const long PILOT_EXT = 0x122448B7;
+
+#ifdef ENABLE_RC
+IRrecv irrecv(IR_RECV_PIN);
+decode_results results;
+#endif
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 
@@ -42,7 +62,12 @@ void setup() {
   
   Serial.begin(9600);
 #endif  
-  AFMS.begin();  // create with the default frequency 1.6KHz
+
+#ifdef ENABLE_RC
+  irrecv.enableIRIn(); // Start the receiver
+#endif
+
+    AFMS.begin();  // create with the default frequency 1.6KHz
 
     lMotor->run(RELEASE);
     rMotor->run(RELEASE);
@@ -78,7 +103,7 @@ void loop()
   long mainLight = readLight(frontLightInPin);
   long leftLight = readLight(leftLightInPin);
   long rightLight = readLight(rightLightInPin);
-  
+  #ifdef DUMMY
   DEBUGN("Front light ");
   DEBUG(mainLight);
   DEBUGN("Left light ");
@@ -88,11 +113,32 @@ void loop()
   DEBUGN("Dist ");
   DEBUGN(cm);
   DEBUG("cm");
+  #endif
   
-  
-  goBob(cm, mainLight, leftLight, rightLight);
+  //goBob(cm, mainLight, leftLight, rightLight);
+
+    stopIfObstacle(cm);
+
+  receiveCommands();
 
   delay(200);
+}
+
+void receiveCommands() {
+#ifdef ENABLE_RC
+    if (receiveRC()) {
+        DEBUG("Received code");
+        DEBUGHEX(results.value);
+        dispatchRCCode(results.value);
+     }
+     receiveResume();
+#endif
+}
+
+void stopIfObstacle(long distanceCm) {
+    if (distanceCm < bobStopDist) {
+        bobStop();
+    }
 }
 
 void goBob(long distanceCm, long mainLight, long leftLight, long rightLight) {
@@ -135,6 +181,13 @@ void go() {
   rMotor->setSpeed(rightSpeed);
 }
 
+void back() {
+  rMotor->run(BACKWARD);
+  lMotor->run(BACKWARD);
+  lMotor->setSpeed(leftSpeed);
+  rMotor->setSpeed(rightSpeed);
+}
+
 void swing() {
     return;
   rMotor->run(FORWARD);
@@ -156,8 +209,8 @@ void bobStop() {
 void twistLeft() {
   lMotor->run(BACKWARD);
   rMotor->run(FORWARD);
-  rMotor->setSpeed(100);
-  lMotor->setSpeed(100);
+  rMotor->setSpeed(150);
+  lMotor->setSpeed(150);
   //delay(100);
 //  go();
 }
@@ -165,8 +218,8 @@ void twistLeft() {
 void twistRight() {
   rMotor->run(BACKWARD);
   lMotor->run(FORWARD);
-  lMotor->setSpeed(100);
-  rMotor->setSpeed(100);
+  lMotor->setSpeed(150);
+  rMotor->setSpeed(150);
 //  delay(100);
   //go();
 }
@@ -185,6 +238,47 @@ long microsecondsToCentimeters(long microseconds)
   // The ping travels out and back, so to find the distance of the
   // object we take half of the distance travelled.
   return microseconds / 29 / 2;
+}
+
+boolean receiveRC() {
+#ifdef ENABLE_RC
+  return irrecv.decode(&results);
+#else
+  //results.value = scaryCode;
+//  delay(3000);
+  return false;
+#endif
+}
+
+void receiveResume() {    
+#ifdef ENABLE_RC
+    irrecv.resume();
+#endif
+}
+
+void dispatchRCCode(unsigned long code) {
+  switch(code) {
+  case PILOT_FWD: 
+    go();
+    break;
+  case PILOT_BCK: 
+      back();
+      break;
+  case PILOT_LFT:
+      twistLeft();
+      break;
+  case PILOT_RGT:
+      twistRight();
+      break;
+  case PILOT_EXT:
+    bobStop();
+    break;
+
+  default:
+    DEBUG("Unknown code");
+    DEBUGHEX(code);
+
+  }
 }
 
 
